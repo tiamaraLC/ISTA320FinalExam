@@ -1,0 +1,87 @@
+---
+title: "ISTA 320 Data Visualization Challenge 7"
+author: "Tiamara Craig"
+date: "Spring 2022"
+output: html_document
+---
+
+
+```{r setup, include=FALSE}
+library(knitr)
+library(tidyverse)
+library(dbplyr)
+opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+cbPalette <- c("#999999", "#E69F00", "#56B4E9", "#009E73", "#F0E442", "#0072B2", "#D55E00", "#CC79A7")
+```
+
+# Read data in
+```{r}
+work_data <- read_csv("data/work.csv", show_col_types = FALSE)
+```
+
+# filter by country ie United States
+```{r}
+USA_Data <- filter(work_data,Country =='United States')
+```
+
+# drop unneeded / redundant columns / update col name "Value" to "Hours Weekly" and "Earnings" to "Wage"
+```{r}
+colnames(USA_Data)[13] <- "Hours_Weekly"
+colnames(USA_Data)[5] <- "Wage"
+clean_USA_Data <- USA_Data[ c(3,5,12, 13) ]
+
+```
+
+# group and sort the col's by year and store it in a new data frame
+```{r}
+new_clean_USA_Data <- clean_USA_Data %>%
+  group_by(Year) %>%
+  arrange(desc(Year)) %>%
+  group_by()
+```
+
+
+# Get rid of duplicate rows and filter out wages that are not Minimun wage.
+```{r}
+uniq_USA_data <-new_clean_USA_Data[!duplicated(new_clean_USA_Data), ]
+final_USA_Data <- filter(uniq_USA_data, Wage =="MIN")
+```
+
+# Plot #1: Bar plot (colorblind frienldly) acc to http://www.cookbook-r.com/Graphs/Colors_(ggplot2)/
+```{r}
+bp <- ggplot(data = final_USA_Data, mapping = aes(x=Year, y=Hours_Weekly, fill=FAMILY)) + geom_col(stat="identity", position = "dodge")
+bp +
+  scale_fill_manual(values=cbPalette) + ggtitle("Weekly Hours to Work to Stay Sbove Poverty Line") +  scale_x_continuous(breaks = scales::pretty_breaks(n = 10))
+
+```
+
+# Plot #2: Scatter plot 
+# create a new data frame that shows the avg hours per year
+```{r}
+Yearly_Avg_Data <- final_USA_Data[ c(3,4) ]
+
+grouped_Year_Data <- Yearly_Avg_Data %>%
+  group_by(Year) %>% 
+  summarize(avg=mean(Hours_Weekly))
+
+sp <- ggplot(data = grouped_Year_Data, mapping = aes(x = Year, y = avg)) +
+  geom_point()  + ggtitle("The Average Hours Needed to Stay Above the Povety Line Each Year")+  scale_x_continuous(breaks = scales::pretty_breaks(n = 20)) + geom_smooth()  +ylab("Avg Hours per week")
+
+sp
+
+```
+
+
+# Plot #3: Scatter plot seperated
+# using final_USA_Data data set
+```{r}
+gp <- ggplot(data = final_USA_Data, aes(x = Year, y = Hours_Weekly)) +
+    geom_line() +
+    facet_wrap(facets = vars(FAMILY)) 
+ gp  + ggtitle("The Average Hours Needed to Stay Above the Povety Line Each Year for each Family Type") +
+  scale_fill_manual(values=cbPalette)
+ 
+```  
